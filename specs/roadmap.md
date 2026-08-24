@@ -10,7 +10,7 @@
 * Add `/register` endpoint (POST) to hash passwords and create new user accounts
 * Add `/login` endpoint (POST) to verify credentials and return a Bearer JWT access token
 * Create a `get_current_user` FastAPI dependency (`OAuth2PasswordBearer`) to protect secure routes
-* Add `/logout` endpoint (GET) for logout
+* Add authenticated `/logout` endpoint (POST) that revokes the presented access token
 * Add `/me` endpoint (GET) to get current username of the user if the user authenticated.
 
 ## Phase 1 - Test suite

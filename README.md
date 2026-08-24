@@ -15,3 +15,6 @@ pip-compile requirements-dev.in
 
 # 6. Install requirements
 pip install -r requirements-dev.txt
+
+# 7. Usefull terminal commands
+tree -L 4 -a -I 'node_modules|.git|.venv|__pycache__'

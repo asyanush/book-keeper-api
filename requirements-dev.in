@@ -1,4 +1,4 @@
 -r requirements.in
 
 pytest
-httpx
+httpx2
