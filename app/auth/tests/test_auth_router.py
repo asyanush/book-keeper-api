@@ -55,7 +55,48 @@ def test_login_returns_access_token(client):
     assert resp.status_code == status.HTTP_200_OK
     body = resp.json()
     assert body["access_token"]
+    assert body["refresh_token"]
     assert body["token_type"] == "bearer"
+
+
+def test_refresh_returns_new_token_pair(client):
+    client.post(
+        f"{AUTH_URL_PREFIX}/register", json={"username": "bob", "password": "secret123"}
+    )
+    login_body = client.post(
+        f"{AUTH_URL_PREFIX}/login", json={"username": "bob", "password": "secret123"}
+    ).json()
+
+    resp = client.post(
+        f"{AUTH_URL_PREFIX}/refresh",
+        json={"refresh_token": login_body["refresh_token"]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    body = resp.json()
+    assert body["access_token"]
+    assert body["refresh_token"]
+    assert body["refresh_token"] != login_body["refresh_token"]
+    reused = client.post(
+        f"{AUTH_URL_PREFIX}/refresh",
+        json={"refresh_token": login_body["refresh_token"]},
+    )
+    assert reused.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_refresh_rejects_access_token(client):
+    client.post(
+        f"{AUTH_URL_PREFIX}/register", json={"username": "bob", "password": "secret123"}
+    )
+    access_token = client.post(
+        f"{AUTH_URL_PREFIX}/login", json={"username": "bob", "password": "secret123"}
+    ).json()["access_token"]
+
+    resp = client.post(
+        f"{AUTH_URL_PREFIX}/refresh", json={"refresh_token": access_token}
+    )
+
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_login_invalid_credentials_returns_401(client):
@@ -119,3 +160,14 @@ def test_protected_endpoint_rejects_missing_token(client):
     )
     assert resp_bad.status_code == status.HTTP_401_UNAUTHORIZED
     assert resp_bad.headers["www-authenticate"] == "Bearer"
+
+
+def test_auth_error_responses_are_documented(client):
+    schema = client.get("/openapi.json").json()
+
+    logout_responses = schema["paths"][f"{AUTH_URL_PREFIX}/logout"]["post"]["responses"]
+    me_responses = schema["paths"][f"{AUTH_URL_PREFIX}/me"]["get"]["responses"]
+
+    assert "Not authenticated" in logout_responses["401"]["description"]
+    assert "Could not validate credentials" in logout_responses["401"]["description"]
+    assert "Not authenticated" in me_responses["401"]["description"]

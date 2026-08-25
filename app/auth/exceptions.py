@@ -20,6 +20,14 @@ class InvalidTokenError(DomainException):
     headers: ClassVar[dict[str, str] | None] = {"WWW-Authenticate": "Bearer"}
 
 
+class NotAuthenticatedError(DomainException):
+    """Raised when authentication credentials are not provided."""
+
+    status_code = status.HTTP_401_UNAUTHORIZED
+    message = "Not authenticated"
+    headers: ClassVar[dict[str, str] | None] = {"WWW-Authenticate": "Bearer"}
+
+
 class InvalidCredentialsError(DomainException):
     """Raised when login attempts with incorrect credentials."""
 

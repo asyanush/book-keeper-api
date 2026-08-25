@@ -6,17 +6,17 @@ import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.auth.exceptions import InvalidTokenError
+from app.auth.exceptions import InvalidTokenError, NotAuthenticatedError
 from app.auth.repository import AuthRepository
 from app.auth.service import AuthService
 from app.core.security import decode_access_token
 from app.db.database import Database, get_db
 
 # Dependency to extract Bearer auth credentials from the Authorization header.
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 AuthenticatedCredentials = Annotated[
-    HTTPAuthorizationCredentials, Depends(bearer_scheme)
+    HTTPAuthorizationCredentials | None, Depends(bearer_scheme)
 ]
 
 
@@ -41,6 +41,9 @@ def get_current_user(
     token: AuthenticatedCredentials, service: AuthServiceDependency
 ) -> dict:
     """Validate a Bearer JWT and return the authenticated public user."""
+    if token is None:
+        raise NotAuthenticatedError()
+
     if service.access_token_is_revoked(token.credentials):
         raise InvalidTokenError()
 
@@ -67,5 +70,9 @@ class AuthenticatedUser:
         token: AuthenticatedCredentials,
         user: CurrentUser,
     ):
+        if token is None:
+            raise NotAuthenticatedError()
         self.token = token.credentials
         self.user = user
+
+CurrentAuthenticatedUser = Annotated[AuthenticatedUser, Depends()]

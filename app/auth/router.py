@@ -1,25 +1,34 @@
 """Authentication routes (register, login, me, etc.)."""
 
-from typing import Annotated
-
-from fastapi import APIRouter, Depends
+import jwt
+from fastapi import APIRouter
 from starlette import status
 
-from app.auth.dependencies import AuthenticatedUser, get_auth_service
+from app.auth.dependencies import (
+    AuthServiceDependency,
+    CurrentAuthenticatedUser,
+)
 from app.auth.exceptions import (
     DuplicateUsernameError,
     InvalidCredentialsError,
+    InvalidTokenError,
+    NotAuthenticatedError,
 )
 from app.auth.schemas import (
     LoginRequest,
+    RefreshTokenRequest,
     TokenResponse,
     UserCreate,
     UsernameResponse,
     UserResponse,
 )
-from app.auth.service import AuthService
 from app.core.schemas import MessageResponse
-from app.core.security import create_access_token, hash_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+)
 from app.core.utils import openapi_responses
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -33,22 +42,17 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 )
 def register(
     payload: UserCreate,
-    service: Annotated[AuthService, Depends(get_auth_service)],
+    service: AuthServiceDependency,
 ):
     """Register a new user account.
 
     Hashes the password, inserts into the database, and returns the
     created user.  Returns 409 if the username is already taken.
     """
-    if service.find_user(payload.username):
-        raise DuplicateUsernameError()
 
     hashed = hash_password(payload.password)
-    try:
-        user = service.register_user(payload.username, hashed)
-    except DuplicateUsernameError:
-        raise DuplicateUsernameError()
-    return user
+
+    return service.register_user(payload.username, hashed)
 
 
 @router.post(
@@ -56,9 +60,7 @@ def register(
     response_model=TokenResponse,
     responses=openapi_responses(InvalidCredentialsError),
 )
-def login(
-    payload: LoginRequest, service: Annotated[AuthService, Depends(get_auth_service)]
-):
+def login(payload: LoginRequest, service: AuthServiceDependency):
     """Authenticate user and return a Bearer JWT access token.
 
     Accepts JSON body with ``username`` and ``password``.
@@ -68,13 +70,48 @@ def login(
     if not user:
         raise InvalidCredentialsError()
     access_token = create_access_token(subject=user["username"])
-    return TokenResponse(access_token=access_token, token_type="bearer")
+    refresh_token = create_refresh_token(subject=user["username"])
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+    )
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    responses=openapi_responses(InvalidTokenError),
+)
+def refresh(payload: RefreshTokenRequest, service: AuthServiceDependency):
+    """Rotate a refresh token and issue a new access-token pair."""
+    if service.access_token_is_revoked(payload.refresh_token):
+        raise InvalidTokenError()
+
+    try:
+        username = decode_refresh_token(payload.refresh_token)
+    except jwt.PyJWTError:
+        raise InvalidTokenError()
+
+    if not service.find_user(username):
+        raise InvalidTokenError()
+
+    service.revoke_access_token(payload.refresh_token)
+    return TokenResponse(
+        access_token=create_access_token(subject=username),
+        refresh_token=create_refresh_token(subject=username),
+        token_type="bearer",
+    )
+
+
+@router.post(
+    "/logout",
+    response_model=MessageResponse,
+    responses=openapi_responses(NotAuthenticatedError, InvalidTokenError),
+)
 def logout(
-    authenticated_user: Annotated[AuthenticatedUser, Depends()],
-    service: Annotated[AuthService, Depends(get_auth_service)],
+    authenticated_user: CurrentAuthenticatedUser,
+    service: AuthServiceDependency,
 ):
     """Revoke the authenticated user's access token.
 
@@ -84,8 +121,12 @@ def logout(
     return MessageResponse(message="Successfully logged out")
 
 
-@router.get("/me", response_model=UsernameResponse)
-def read_me(authenticated_user: Annotated[AuthenticatedUser, Depends()]):
+@router.get(
+    "/me",
+    response_model=UsernameResponse,
+    responses=openapi_responses(NotAuthenticatedError, InvalidTokenError),
+)
+def read_me(authenticated_user: CurrentAuthenticatedUser):
     """Return the currently authenticated user's username.
 
     Requires a valid Bearer token.  Returns 401 if the token is missing

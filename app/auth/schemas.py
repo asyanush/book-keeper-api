@@ -20,10 +20,17 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128, examples=["secret123"])
 
 
+class RefreshTokenRequest(BaseModel):
+    """Request body for POST /refresh."""
+
+    refresh_token: str = Field(min_length=1)
+
+
 class TokenResponse(BaseModel):
     """JWT access token response."""
 
     access_token: str
+    refresh_token: str
     token_type: Literal["bearer"] = "bearer"
 
 
