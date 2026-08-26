@@ -6,6 +6,11 @@ from app.db.database import get_db
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def fast_bcrypt(monkeypatch):
+    monkeypatch.setattr(settings, "BCRYPT_ROUNDS", 4)
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATABASE_PATH", tmp_path / "test.db")

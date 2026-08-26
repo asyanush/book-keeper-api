@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from uuid import uuid4
 
 import jwt
@@ -9,16 +10,21 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+@lru_cache
+def _get_pwd_context(rounds: int) -> CryptContext:
+    return CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=rounds)
 
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password using bcrypt via passlib."""
+    pwd_context = _get_pwd_context(settings.BCRYPT_ROUNDS)
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
+    pwd_context = _get_pwd_context(settings.BCRYPT_ROUNDS)
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -33,7 +39,9 @@ def create_access_token(subject: str, expires_delta: timedelta | None = None) ->
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     payload = {"sub": subject, "type": "access", "jti": str(uuid4()), "exp": expire}
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
 
 
 def create_refresh_token(subject: str) -> str:
@@ -42,7 +50,9 @@ def create_refresh_token(subject: str) -> str:
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     payload = {"sub": subject, "type": "refresh", "jti": str(uuid4()), "exp": expire}
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
 
 
 def decode_access_token(token: str) -> str:
@@ -50,7 +60,9 @@ def decode_access_token(token: str) -> str:
 
     Raises ``jwt.PyJWTError`` on any invalid/expired token.
     """
-    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    payload = jwt.decode(
+        token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+    )
     if payload.get("type") != "access":
         raise jwt.InvalidTokenError("Not an access token")
     return payload["sub"]
@@ -58,7 +70,9 @@ def decode_access_token(token: str) -> str:
 
 def decode_refresh_token(token: str) -> str:
     """Decode and validate a refresh JWT, returning its subject."""
-    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    payload = jwt.decode(
+        token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+    )
     if payload.get("type") != "refresh":
         raise jwt.InvalidTokenError("Not a refresh token")
     return payload["sub"]
