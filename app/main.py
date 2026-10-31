@@ -40,7 +40,6 @@ app.add_exception_handler(
 )
 app.include_router(api_router, prefix="/v1")
 
-
 @app.get("/")
 def root():
     return {

@@ -1,7 +1,7 @@
 ---
 description: Generates code and implements tasks delegated to it. Use when you need to write, modify, or scaffold code based on detailed specifications.
 mode: subagent
-model: openrouter/deepseek/deepseek-v4-flash
+model: openrouter/deepseek/deepseek-v4-pro
 ---
 
 You are an implementer subagent. Your primary goal is to generate code and implement tasks that are delegated to you.

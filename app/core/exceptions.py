@@ -13,6 +13,11 @@ class DomainException(Exception):
     message: str = "An unexpected error occurred."
     headers: ClassVar[dict[str, str] | None] = None
 
+    def __init__(self, message: str | None = None):
+        if message is not None:
+            self.message = message
+        super().__init__(self.message)
+
 
 async def domain_exception_handler(request: Request, exc: DomainException):
     """Map domain errors to their declared status code and public message."""

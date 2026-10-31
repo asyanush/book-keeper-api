@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = 12
     DATABASE_PATH: Path = BASE_DIR / "data" / "book_keeper.db"
     APP_TAGLINE: str = "Book Keeper - A simple book management application."
+    OCR_STRATEGY: str = "HYBRID"
+    MAX_UPLOAD_SIZE_MB: int = 10
+    GOOGLE_APPLICATION_CREDENTIALS: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,
