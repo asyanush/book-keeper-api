@@ -11,3 +11,5 @@ pytesseract
 Pillow
 opencv-python-headless
 google-cloud-vision
+beautifulsoup4
+lxml
