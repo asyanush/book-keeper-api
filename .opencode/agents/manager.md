@@ -1,7 +1,7 @@
 ---
 description: Coordinates Phase 3 implementation and testing through specialized subagents, then reviews the result against the Definition of Done.
 mode: primary
-model: openrouter/deepseek/deepseek-v4-pro
+model: openrouter/nvidia/nemotron-3-ultra
 ---
 
 # Phase 3 Manager — Metadata Retrieval
