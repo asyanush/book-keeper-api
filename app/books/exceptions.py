@@ -22,3 +22,13 @@ class FileTooLargeError(DomainException):
 
     status_code = status.HTTP_413_CONTENT_TOO_LARGE
     message = "File too large."
+
+
+class MetadataServiceUnavailable(DomainException):
+    """Raised when all external metadata providers fail and no cached results exist."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    message = (
+        "All external book metadata providers are currently unavailable "
+        "and no cached results were found. Please try again later."
+    )

@@ -175,3 +175,30 @@ def auth_headers(client: TestClient) -> dict[str, str]:
     token: str = resp.json()["access_token"]
 
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def authenticated_client(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> TestClient:
+    """A ``TestClient`` whose default headers include the JWT bearer token.
+
+    Mirrors the fixture of the same name defined for the metadata test suite
+    (``app/books/metadata/tests/conftest.py``) so endpoint tests living in
+    ``app/books/tests/`` can share the same authentication convention.
+    """
+    client.headers.update(auth_headers)
+    return client
+
+
+@pytest.fixture
+def unauthenticated_client(client: TestClient) -> TestClient:
+    """A ``TestClient`` with no ``Authorization`` header.
+
+    .. note::
+       Do not request this fixture together with ``authenticated_client`` in
+       the same test, since both wrap the same per-test ``client`` instance.
+    """
+    client.headers.pop("Authorization", None)
+    return client

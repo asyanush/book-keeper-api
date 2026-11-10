@@ -51,7 +51,8 @@ class TestUploadCover:
         sample_image_bytes: bytes,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Valid image with mocked OCR → 200 + expected response keys."""
+        """Valid image with mocked OCR → 200 + expected response keys,
+        including parsed_cover."""
         mock_result = {
             "raw_text": "Mocked OCR text with ISBN 9780135957059",
             "detected_isbns": ["9780135957059"],
@@ -59,7 +60,7 @@ class TestUploadCover:
         }
 
         monkeypatch.setattr(
-            "app.books.router.extract_cover_text",
+            "app.books.router.extract_book_text",
             lambda _image_bytes: mock_result,
         )
 
@@ -74,3 +75,4 @@ class TestUploadCover:
         assert body["raw_text"] == mock_result["raw_text"]
         assert body["detected_isbns"] == mock_result["detected_isbns"]
         assert body["engine_used"] == mock_result["engine_used"]
+        assert "parsed_cover" in body  # new backward-compat field

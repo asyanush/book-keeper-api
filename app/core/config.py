@@ -25,6 +25,7 @@ ENV_SUFFIX = ENV_MAP.get(RAW_ENV, "dev")
 # Point directly to project_root/.env.dev
 ENV_FILE_PATH = BASE_DIR / f".env.{ENV_SUFFIX}"
 
+
 class Settings(BaseSettings):
     API_NAME: str = "Book Keeper API"
     API_VERSION: str = "1.0"
@@ -39,10 +40,21 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
     GOOGLE_APPLICATION_CREDENTIALS: str | None = None
 
+    # Phase 3: Metadata Retrieval Settings
+    GOOGLE_BOOKS_API_URL: str = "https://www.googleapis.com/books/v1/volumes"
+    OPEN_LIBRARY_API_URL: str = "https://openlibrary.org"
+    GOOGLE_BOOKS_API_KEY: str | None = None
+    METADATA_TIMEOUT: int = 10
+    METADATA_MAX_RETRIES: int = 2
+    METADATA_CACHE_TTL: int = 86400
+    METADATA_STRATEGY: str = "HYBRID"
+    SCRAPING_ENABLED: bool = False
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH,
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
 
 settings = Settings()
